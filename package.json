@@ -1,0 +1,9 @@
+{
+  "name": "ast-nomination-2026",
+  "version": "1.0.0",
+  "description": "AST Academy Awards 2026 Nomination Write-up Generator — Beatty Secondary School",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev"
+  }
+}

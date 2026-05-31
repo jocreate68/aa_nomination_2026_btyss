@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AST Academy Awards 2026 — Nomination Write-up Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#8B1A1A;--rm:#C0392B;--rl:#F8E8E8;--rf:#FDF5F5;
+  --g1:#F4F2EF;--g2:#E8E4DE;--g3:#888;--wh:#fff;
+  --tx:#1A1A1A;--t2:#555;
+  --fh:'Crimson Pro',Georgia,serif;
+  --fb:'DM Sans',sans-serif;
+}
+body{font-family:var(--fb);color:var(--tx);font-size:14px;background:#EDEBE7;min-height:100vh}
+.topbar{background:var(--red);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.tb-title{font-family:var(--fh);font-size:19px;font-weight:600;color:#fff}
+.tb-sub{font-size:11px;color:rgba(255,255,255,.6);margin-top:1px}
+.tb-dates{text-align:right;font-size:11px;color:rgba(255,255,255,.6);line-height:1.6}
+.tb-dates strong{color:#fff}
+.strip{background:var(--rl);border-bottom:1px solid var(--g2);padding:8px 16px;display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.strip-lbl{font-size:11px;font-weight:500;color:var(--red);text-transform:uppercase;letter-spacing:.06em;margin-right:3px;white-space:nowrap}
+.nt{padding:4px 9px;font-size:12px;border:1px solid var(--g2);border-radius:3px;cursor:pointer;background:var(--wh);color:var(--t2);display:flex;align-items:center;gap:4px;transition:all .12s;white-space:nowrap;font-family:var(--fb)}
+.nt:hover{border-color:var(--rm);color:var(--red)}
+.nt.act{background:var(--red);border-color:var(--red);color:#fff;font-weight:500}
+.nt.named{border-color:var(--rm)}
+.nt-x{font-size:13px;opacity:.55;background:none;border:none;cursor:pointer;color:inherit;padding:0 0 0 1px;line-height:1;font-family:var(--fb)}
+.nt-x:hover{opacity:1}
+.add-btn{padding:4px 11px;font-size:12px;border:1.5px dashed var(--rm);border-radius:3px;cursor:pointer;background:transparent;color:var(--rm);font-weight:500;transition:all .12s;white-space:nowrap;font-family:var(--fb)}
+.add-btn:hover{background:var(--rm);color:#fff;border-style:solid}
+.layout{display:flex;min-height:calc(100vh - 130px)}
+.sidebar{width:216px;flex-shrink:0;background:var(--g1);border-right:1px solid var(--g2);position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto}
+.main{flex:1;padding:20px 24px;overflow:auto}
+.sb-sec{padding:12px 14px;border-bottom:1px solid var(--g2)}
+.sb-lbl{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--g3);margin-bottom:7px}
+.sb-f{margin-bottom:7px}
+.sb-f label{font-size:11px;color:var(--t2);display:block;margin-bottom:3px}
+.sb-f input{width:100%;font-family:var(--fb);font-size:12px;padding:5px 7px;border:1px solid var(--g2);border-radius:3px;background:var(--wh);color:var(--tx)}
+.sb-f input:focus{outline:none;border-color:var(--rm)}
+.ro{display:flex;flex-direction:column;gap:5px}
+.rop{display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer}
+.cks{display:flex;flex-direction:column;gap:5px}
+.ck{display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer}
+.ck input,.rop input{accent-color:var(--red)}
+.bdg{font-size:10px;padding:1px 5px;border-radius:2px;font-weight:500}
+.ba{background:#E3EEF7;color:#1a5c8a}.bf{background:#FEF3E2;color:#8a5200}
+.go-btn{display:block;width:100%;margin-top:10px;padding:6px;font-size:12px;font-family:var(--fb);background:var(--red);color:#fff;border:none;border-radius:3px;cursor:pointer;font-weight:500;transition:background .12s}
+.go-btn:hover{background:var(--rm)}
+.go-btn:disabled{opacity:.4;cursor:not-allowed}
+.repo-panel{padding:12px 14px;border-bottom:1px solid var(--g2)}
+.repo-lbl{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--g3);margin-bottom:7px}
+.drive-row{display:flex;gap:5px;align-items:center;margin-bottom:5px}
+.drive-input{flex:1;font-family:var(--fb);font-size:11px;padding:4px 6px;border:1px solid var(--g2);border-radius:3px;background:var(--wh);color:var(--tx)}
+.drive-input:focus{outline:none;border-color:var(--rm)}
+.drive-link{font-size:11px;padding:3px 7px;border:1px solid var(--g2);border-radius:3px;cursor:pointer;background:var(--wh);color:var(--t2);text-decoration:none;display:none;align-items:center;transition:all .12s}
+.drive-link:hover{border-color:var(--rm);color:var(--red)}
+.zip-btn{display:flex;align-items:center;gap:5px;width:100%;padding:5px 8px;font-size:11px;font-family:var(--fb);border:1px solid var(--g2);border-radius:3px;cursor:pointer;background:var(--wh);color:var(--t2);transition:all .12s;margin-top:4px}
+.zip-btn:hover{border-color:var(--rm);color:var(--red)}
+.zip-btn:disabled{opacity:.4;cursor:not-allowed}
+.file-count{font-size:10px;color:var(--g3);margin-top:4px}
+.atabs{display:flex;border-bottom:2px solid var(--g2);margin-bottom:18px}
+.atab{padding:7px 12px;font-size:12px;font-family:var(--fb);border:none;border-bottom:2px solid transparent;cursor:pointer;background:transparent;color:var(--t2);margin-bottom:-2px;display:flex;align-items:center;gap:4px;transition:all .12s}
+.atab:hover{color:var(--red)}
+.atab.act{color:var(--red);border-bottom-color:var(--red);font-weight:500}
+.atab.done{color:#2d7a2d}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dd{background:#4caf50}.dp{background:var(--g2)}
+.sec-hdr{background:var(--red);padding:9px 13px;margin-bottom:13px;border-radius:3px}
+.sec-hdr h3{font-family:var(--fh);font-size:15px;font-weight:600;color:#fff}
+.sec-hdr p{font-size:11px;color:rgba(255,255,255,.65);margin-top:2px}
+.f{margin-bottom:11px}
+.f label{display:block;font-size:11px;font-weight:500;color:var(--t2);margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em}
+.f input,.f textarea{width:100%;font-family:var(--fb);font-size:13px;padding:6px 9px;border:1px solid var(--g2);border-radius:3px;background:var(--wh);color:var(--tx);transition:border .12s}
+.f input:focus,.f textarea:focus{outline:none;border-color:var(--rm)}
+.f textarea{resize:vertical;min-height:72px;line-height:1.6}
+.hint{font-size:11px;color:var(--g3);margin-top:3px;line-height:1.5}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+.divider{border:none;border-top:1px solid var(--g2);margin:13px 0}
+.ws-sub{font-family:var(--fh);font-size:14px;font-weight:600;color:var(--red);margin-bottom:9px;padding-bottom:3px;border-bottom:1px solid var(--rl)}
+/* evidence */
+.ev-lbl{display:block;font-size:11px;font-weight:500;color:var(--t2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.evbox{border:1.5px dashed var(--g2);border-radius:4px;background:var(--g1);margin-bottom:5px;transition:border .15s}
+.evbox.over{border-color:var(--rm);background:var(--rf)}
+.evdrop{padding:13px;text-align:center;cursor:pointer;font-size:12px;color:var(--g3);line-height:1.9}
+.evdrop strong{color:var(--red);cursor:pointer}
+.evnotes{width:100%;font-family:var(--fb);font-size:13px;padding:6px 9px;border:none;border-top:1px solid var(--g2);border-radius:0 0 4px 4px;background:var(--wh);color:var(--tx);resize:vertical;min-height:50px;line-height:1.6;display:block}
+.evnotes:focus{outline:none}
+.evfiles{display:flex;flex-direction:column;gap:3px;padding:6px 8px;border-top:1px solid var(--g2)}
+.evfile{display:flex;align-items:center;gap:6px;font-size:12px;background:var(--wh);border:1px solid var(--g2);border-radius:3px;padding:4px 7px}
+.evthumb{width:32px;height:32px;object-fit:cover;border-radius:2px;border:1px solid var(--g2);flex-shrink:0}
+.evname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t2)}
+.evsz{font-size:10px;color:var(--g3);flex-shrink:0}
+.evrm{cursor:pointer;color:var(--g3);font-size:13px;background:none;border:none;padding:0;line-height:1;flex-shrink:0}
+.evrm:hover{color:var(--red)}
+/* generate button */
+.gen-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px 16px;font-size:14px;font-family:var(--fb);font-weight:500;border:2px solid var(--red);border-radius:4px;cursor:pointer;background:var(--red);color:#fff;transition:all .15s;margin-top:16px}
+.gen-btn:hover{background:var(--rm);border-color:var(--rm)}
+.gen-btn:disabled{opacity:.5;cursor:not-allowed}
+/* output — prominent panel */
+.out-wrap{margin-top:16px;border:2px solid var(--red);border-radius:5px;overflow:hidden;display:none;box-shadow:0 3px 12px rgba(139,26,26,.12)}
+.out-hdr{background:var(--red);padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
+.out-hdr span{font-family:var(--fh);font-size:15px;font-weight:600;color:#fff}
+.out-actions{display:flex;gap:7px;align-items:center}
+.cp-btn{font-size:12px;padding:3px 10px;border:1px solid rgba(255,255,255,.5);border-radius:3px;cursor:pointer;background:transparent;color:#fff;font-family:var(--fb);transition:all .12s}
+.cp-btn:hover{background:rgba(255,255,255,.15)}
+.out-body{padding:16px;font-size:14px;line-height:1.85;color:var(--tx);white-space:pre-wrap;background:var(--wh);min-height:60px}
+.out-notice{padding:8px 14px;background:var(--rl);border-top:1px solid #e0cece;font-size:11px;color:var(--rm)}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:60px 20px;color:var(--t2)}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:.2}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.32);display:flex;align-items:center;justify-content:center;z-index:200}
+.modal{background:var(--wh);border-radius:5px;padding:22px;max-width:300px;width:90%;border:1px solid var(--g2);box-shadow:0 8px 32px rgba(0,0,0,.15)}
+.modal h4{font-family:var(--fh);font-size:16px;color:var(--red);margin-bottom:6px}
+.modal p{font-size:13px;color:var(--t2);margin-bottom:14px;line-height:1.5}
+.modal-btns{display:flex;gap:7px;justify-content:flex-end}
+.modal-cancel{padding:5px 12px;font-size:12px;font-family:var(--fb);border:1px solid var(--g2);border-radius:3px;cursor:pointer;background:var(--wh);color:var(--t2)}
+.modal-ok{padding:5px 12px;font-size:12px;font-family:var(--fb);border:none;border-radius:3px;cursor:pointer;background:var(--red);color:#fff;font-weight:500}
+.toast{position:fixed;bottom:18px;right:18px;background:var(--tx);color:var(--wh);padding:9px 15px;border-radius:4px;font-size:12px;font-family:var(--fb);z-index:300;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--g2);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="tb-title">Academy Awards for Professional Development</div>
+    <div class="tb-sub">Beatty Secondary School · 2026 Nomination Master</div>
+  </div>
+  <div class="tb-dates">Nomination period &nbsp;<strong>25 May – 15 Jul 2026</strong><br>Qualifying period &nbsp;<strong>28 Jun 2025 – 27 Jun 2026</strong></div>
+</div>
+
+<div class="strip">
+  <div class="strip-lbl">Nominees</div>
+  <div id="ntabs" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center"></div>
+  <button class="add-btn" onclick="addNominee()">＋ Add nominee</button>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sb-sec">
+      <div class="sb-lbl">Nominee details</div>
+      <div class="sb-f"><label>Full statutory name</label><input id="sb-name" type="text" placeholder="As per MOE HR records" oninput="onName(this.value)"></div>
+      <div class="sb-f"><label>Nominator</label><input id="sb-nom" type="text" placeholder="Who is nominating?"></div>
+    </div>
+    <div class="sb-sec">
+      <div class="sb-lbl">Award type</div>
+      <div class="ro">
+        <label class="rop"><input type="radio" name="aw" value="a" checked onchange="onAward('a')"> Associate of AST <span class="bdg ba">1 area</span></label>
+        <label class="rop"><input type="radio" name="aw" value="f" onchange="onAward('f')"> Fellow of AST <span class="bdg bf">2+ areas</span></label>
+      </div>
+    </div>
+    <div class="sb-sec">
+      <div class="sb-lbl">Areas of contribution</div>
+      <div class="cks">
+        <label class="ck"><input type="checkbox" value="nlc" onchange="onArea('nlc',this.checked)"> A – NLC</label>
+        <label class="ck"><input type="checkbox" value="ws"  onchange="onArea('ws',this.checked)"> B – Workshops</label>
+        <label class="ck"><input type="checkbox" value="inn" onchange="onArea('inn',this.checked)"> C – Innovator</label>
+        <label class="ck"><input type="checkbox" value="men" onchange="onArea('men',this.checked)"> D – Mentor</label>
+        <label class="ck"><input type="checkbox" value="res" onchange="onArea('res',this.checked)"> E – Researcher</label>
+      </div>
+      <button class="go-btn" id="go-btn" onclick="showAreas()" disabled>Fill in area details →</button>
+    </div>
+    <div class="repo-panel">
+      <div class="repo-lbl">Evidence repository</div>
+      <div style="font-size:11px;color:var(--t2);margin-bottom:6px">Google Drive folder for this nominee</div>
+      <div class="drive-row">
+        <input class="drive-input" id="drive-url" type="text" placeholder="Paste Drive folder link…" oninput="saveDriveUrl(this.value)">
+        <a id="drive-open" href="#" class="drive-link" target="_blank" title="Open folder">↗</a>
+      </div>
+      <div style="font-size:10px;color:var(--g3);margin-bottom:8px;line-height:1.5">Share this link with nominee so they upload evidence directly.</div>
+      <button class="zip-btn" id="zip-btn" onclick="downloadZip()" disabled>⬇ Download all evidence as ZIP</button>
+      <div class="file-count" id="file-count">No files uploaded yet</div>
+    </div>
+  </div>
+
+  <div class="main" id="main-panel">
+    <div class="empty">
+      <div class="empty-icon">📋</div>
+      <p>Enter a nominee's name, select their areas, then click <strong>Fill in area details</strong>.</p>
+    </div>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ─── SVG spark icon ─────────────────────────────────────────────────── */
+const SPARK = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"/></svg>`;
+
+/* ─── constants ──────────────────────────────────────────────────────── */
+const AREAS = [
+  {id:'nlc', lb:'A – NLC',       fl:'Facilitator of networked learning communities'},
+  {id:'ws',  lb:'B – Workshops', fl:'Facilitator of workshops'},
+  {id:'inn', lb:'C – Innovator', fl:'Innovator / innovator (technology for learning)'},
+  {id:'men', lb:'D – Mentor',    fl:'Mentor'},
+  {id:'res', lb:'E – Researcher',fl:'Researcher'}
+];
+
+/* ─── state ──────────────────────────────────────────────────────────── */
+function mkN(num){
+  return {num, name:'', award:'a', areas:[], nom:'', driveUrl:'',
+    nlc:{n:'',m:'',b:'',r:'',s:'',notes:'',files:[]},
+    ws:{w1n:'',w1d:'',w1p:'',w1pr:'',w1sq:'',w1notes:'',w1files:[],
+        w2n:'',w2d:'',w2p:'',w2pr:'',w2sq:'',w2notes:'',w2files:[]},
+    inn:{tech:'no',nm:'',sh:'',dt:'',notes:'',files:[]},
+    men:{mt:'',pd:'',notes:'',files:[]},
+    res:{pt:'',tl:'',pl:'',dt:'',notes:'',files:[]},
+    out:{nlc:'',ws:'',inn:'',men:'',res:''}};
+}
+let nominees = Array.from({length:10}, (_,i) => mkN(i+1));
+let cur = 0, curA = 'nlc', av = false;
+const N  = () => nominees[cur];
+const $  = id => document.getElementById(id);
+
+function toast(msg){
+  const el=$('toast'); el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 2400);
+}
+
+/* ─── nominee tabs ───────────────────────────────────────────────────── */
+function renderTabs(){
+  $('ntabs').innerHTML = nominees.map((n,i) =>
+    `<div class="nt${i===cur?' act':''}${n.name?' named':''}" onclick="selN(${i})">${
+      n.name||'Nominee '+(i+1)
+    }<button class="nt-x" onclick="event.stopPropagation();confirmDel(${i})" title="Remove">✕</button></div>`
+  ).join('');
+}
+
+function addNominee(){
+  nominees.push(mkN(nominees.length+1));
+  cur = nominees.length-1; av = false;
+  renderTabs(); loadSB(); resetMain();
+  setTimeout(()=>$('sb-name')?.focus(), 50);
+}
+
+function confirmDel(i){
+  if(nominees.length===1){showModal('Cannot remove','You need at least one nominee.',null);return;}
+  const lbl = nominees[i].name||'Nominee '+(i+1);
+  showModal('Remove nominee?',`Remove <strong>${lbl}</strong> and all their data?`, ()=>{
+    nominees.splice(i,1);
+    if(cur>=nominees.length) cur=nominees.length-1;
+    av=false; renderTabs(); loadSB(); resetMain();
+  });
+}
+
+function showModal(title,body,onOk){
+  const r=$('modal-root');
+  if(!onOk){
+    r.innerHTML=`<div class="modal-bg"><div class="modal"><h4>${title}</h4><p>${body}</p><div class="modal-btns"><button class="modal-ok" onclick="closeModal()">OK</button></div></div></div>`;
+    return;
+  }
+  const fn=onOk.toString();
+  r.innerHTML=`<div class="modal-bg"><div class="modal"><h4>${title}</h4><p>${body}</p><div class="modal-btns"><button class="modal-cancel" onclick="closeModal()">Cancel</button><button class="modal-ok" onclick="closeModal();(${fn})()">Remove</button></div></div></div>`;
+}
+function closeModal(){ $('modal-root').innerHTML=''; }
+
+/* ─── sidebar ────────────────────────────────────────────────────────── */
+function loadSB(){
+  const n=N();
+  $('sb-name').value = n.name;
+  $('sb-nom').value  = n.nom;
+  document.querySelectorAll('input[name="aw"]').forEach(r=>r.checked=(r.value===n.award));
+  document.querySelectorAll('.cks input[type=checkbox]').forEach(c=>c.checked=n.areas.includes(c.value));
+  $('go-btn').disabled = n.areas.length===0;
+  loadRepo();
+}
+function loadRepo(){
+  const url = N().driveUrl||'';
+  $('drive-url').value = url;
+  const lnk=$('drive-open');
+  if(url){lnk.href=url; lnk.style.display='flex';} else lnk.style.display='none';
+  updateFileCount();
+}
+function saveDriveUrl(v){
+  N().driveUrl=v;
+  const lnk=$('drive-open');
+  if(v){lnk.href=v; lnk.style.display='flex';} else lnk.style.display='none';
+}
+
+function allFiles(){
+  const n=N(); let all=[];
+  ['nlc','inn','men','res'].forEach(a=>{ if(n[a]?.files) all=all.concat(n[a].files.map(f=>({...f,area:a}))); });
+  (n.ws?.w1files||[]).forEach(f=>all.push({...f,area:'ws_w1'}));
+  (n.ws?.w2files||[]).forEach(f=>all.push({...f,area:'ws_w2'}));
+  return all;
+}
+function updateFileCount(){
+  const files=allFiles(); const el=$('file-count'), zb=$('zip-btn');
+  if(!files.length){ el.textContent='No files uploaded yet'; zb.disabled=true; }
+  else{ el.textContent=`${files.length} file${files.length>1?'s':''} uploaded`; zb.disabled=false; }
+}
+async function downloadZip(){
+  const n=N(); const files=allFiles();
+  if(!files.length){ toast('No files to download.'); return; }
+  const zip=new JSZip();
+  const nm=(n.name||'Nominee_'+n.num).replace(/\s+/g,'_');
+  const folder=zip.folder(nm+'_Evidence');
+  const areaLabel={nlc:'A_NLC',ws_w1:'B_Workshop1',ws_w2:'B_Workshop2',inn:'C_Innovator',men:'D_Mentor',res:'E_Researcher'};
+  files.forEach(f=>{
+    const b64=f.data.split(',')[1];
+    folder.folder(areaLabel[f.area]||f.area).file(f.name,b64,{base64:true});
+  });
+  const blob=await zip.generateAsync({type:'blob'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=nm+'_Evidence.zip'; a.click();
+  toast(`Downloaded ${files.length} file${files.length>1?'s':''} for ${n.name||'Nominee '+n.num}`);
+}
+
+function resetMain(){
+  $('main-panel').innerHTML=`<div class="empty"><div class="empty-icon">📋</div><p>Enter a nominee's name, select their areas, then click <strong>Fill in area details</strong>.</p></div>`;
+}
+function selN(i){ cur=i; av=false; renderTabs(); loadSB(); resetMain(); }
+function onName(v){ N().name=v; renderTabs(); }
+function onAward(v){ N().award=v; }
+function onArea(id,chk){
+  if(chk && !N().areas.includes(id)) N().areas.push(id);
+  if(!chk) N().areas=N().areas.filter(a=>a!==id);
+  $('go-btn').disabled = N().areas.length===0;
+}
+function showAreas(){ N().nom=$('sb-nom').value; av=true; curA=N().areas[0]||'nlc'; renderMain(); }
+
+/* ─── evidence uploader ──────────────────────────────────────────────── */
+function evHTML(ak2, sk){
+  const uid=`ev_${cur}_${sk||ak2}`;
+  return `<div class="f">
+  <label class="ev-lbl">Evidence — upload files or paste images</label>
+  <div class="evbox" id="eb_${uid}"
+    ondragover="eDO(event,'${uid}')" ondragleave="eDL('${uid}')"
+    ondrop="eDrop(event,${cur},'${ak2}','${sk||''}','${uid}')">
+    <div class="evdrop" onclick="document.getElementById('ei_${uid}').click()">
+      📎 Drop PDF or images here · <strong>click to browse</strong> · or paste Ctrl+V / ⌘V<br>
+      <span style="font-size:11px">PDF, PNG, JPG accepted — Gemini reads the file content automatically</span>
+    </div>
+    <input type="file" id="ei_${uid}" style="display:none" multiple accept=".pdf,image/*"
+      onchange="eFile(event,${cur},'${ak2}','${sk||''}','${uid}')">
+    <div id="ef_${uid}"></div>
+    <textarea class="evnotes" id="en_${uid}"
+      placeholder="Optional: add notes or extra context (Gemini reads your files directly — notes are supplementary)"
+      oninput="eNote(this.value,${cur},'${ak2}','${sk||''}')"></textarea>
+  </div>
+  <p class="hint">Upload slides, feedback forms, screenshots, or any evidence — Gemini reads them and writes the nomination from the content.</p>
+  </div>`;
+}
+
+function eDO(e,u){ e.preventDefault(); $('eb_'+u)?.classList.add('over'); }
+function eDL(u){ $('eb_'+u)?.classList.remove('over'); }
+function eDrop(e,ni,ak2,sk,u){ e.preventDefault(); eDL(u); hFiles(e.dataTransfer.files,ni,ak2,sk,u); }
+function eFile(e,ni,ak2,sk,u){ hFiles(e.target.files,ni,ak2,sk,u); }
+function getFA(ni,ak2,sk){ const n=nominees[ni]; const k=sk?sk+'files':'files'; if(!n[ak2][k])n[ak2][k]=[]; return n[ak2][k]; }
+function eNote(v,ni,ak2,sk){ nominees[ni][ak2][sk?sk+'notes':'notes']=v; }
+function hFiles(fl,ni,ak2,sk,u){
+  const arr=getFA(ni,ak2,sk);
+  Array.from(fl).forEach(f=>{
+    if(f.type!=='application/pdf' && !f.type.startsWith('image/')) return;
+    const r=new FileReader();
+    r.onload=e=>{ arr.push({name:f.name,size:f.size,type:f.type,data:e.target.result}); rEF(ni,ak2,sk,u); updateFileCount(); };
+    r.readAsDataURL(f);
+  });
+}
+function rEF(ni,ak2,sk,u){
+  const arr=getFA(ni,ak2,sk); const el=$('ef_'+u); if(!el) return;
+  if(!arr.length){ el.innerHTML=''; return; }
+  el.innerHTML=`<div class="evfiles">${arr.map((f,i)=>{
+    const isImg=f.type.startsWith('image/');
+    return `<div class="evfile">${
+      isImg ? `<img class="evthumb" src="${f.data}" alt="">` : `<span style="font-size:16px;flex-shrink:0">📄</span>`
+    }<span class="evname">${f.name}</span><span class="evsz">${Math.round(f.size/1024)}KB</span><button class="evrm" onclick="rmFile(${ni},'${ak2}','${sk||''}',${i},'${u}')">✕</button></div>`;
+  }).join('')}</div>`;
+}
+function rmFile(ni,ak2,sk,i,u){ getFA(ni,ak2,sk).splice(i,1); rEF(ni,ak2,sk,u); updateFileCount(); }
+
+document.addEventListener('paste', e=>{
+  if(!av) return;
+  for(const item of (e.clipboardData?.items||[])){
+    if(item.type.startsWith('image/')){
+      const f=item.getAsFile(); if(!f) continue;
+      const u=`ev_${cur}_${curA}`;
+      hFiles([f], cur, curA, '', u); e.preventDefault(); break;
+    }
+  }
+});
+
+/* ─── form builders ──────────────────────────────────────────────────── */
+function genBlock(id){
+  return `
+  <button class="gen-btn" id="gbtn-${id}" onclick="generate('${id}')">${SPARK} &nbsp;Generate write-up from evidence</button>
+  <div class="out-wrap" id="ow-${id}">
+    <div class="out-hdr">
+      <span>✦ Generated write-up</span>
+      <div class="out-actions">
+        <button class="cp-btn" onclick="copyOut('${id}')">📋 Copy</button>
+      </div>
+    </div>
+    <div class="out-body" id="ob-${id}"></div>
+    <div class="out-notice">Review and edit before pasting into your nomination form. The write-up is based on the evidence and details you provided above.</div>
+  </div>`;
+}
+
+function nlcForm(n){ const d=n.nlc; return `
+  <div class="sec-hdr"><h3>A — Networked learning communities</h3><p>Facilitates professional learning involving collaboration with other officers</p></div>
+  <div class="r2">
+    <div class="f"><label>Name of NLC</label><input value="${d.n||''}" oninput="nominees[${cur}].nlc.n=this.value" placeholder="e.g. English Language NLC"></div>
+    <div class="f"><label>No. of members</label><input value="${d.m||''}" oninput="nominees[${cur}].nlc.m=this.value" placeholder="e.g. 12"></div>
+  </div>
+  <div class="f"><label>Background and focus of NLC</label><textarea oninput="nominees[${cur}].nlc.b=this.value">${d.b||''}</textarea></div>
+  <div class="f"><label>Role of nominee in the NLC</label><input value="${d.r||''}" oninput="nominees[${cur}].nlc.r=this.value" placeholder="e.g. Lead facilitator"></div>
+  <div class="f"><label>Details of sharing on behalf of NLC</label><input value="${d.s||''}" oninput="nominees[${cur}].nlc.s=this.value" placeholder="Platform, date, nature of sharing"></div>
+  ${evHTML('nlc','')}${genBlock('nlc')}`; }
+
+function wsForm(n){ const d=n.ws; return `
+  <div class="sec-hdr"><h3>B — Facilitator of workshops</h3><p>Initiates and delivers workshops facilitating professional learning</p></div>
+  <div class="ws-sub">Workshop 1</div>
+  <div class="r3">
+    <div class="f"><label>Workshop name</label><input value="${d.w1n||''}" oninput="nominees[${cur}].ws.w1n=this.value"></div>
+    <div class="f"><label>Date</label><input value="${d.w1d||''}" oninput="nominees[${cur}].ws.w1d=this.value" placeholder="e.g. Mar 2026"></div>
+    <div class="f"><label>No. of participants</label><input value="${d.w1p||''}" oninput="nominees[${cur}].ws.w1p=this.value"></div>
+  </div>
+  <div class="r2">
+    <div class="f"><label>Profile of participants</label><input value="${d.w1pr||''}" oninput="nominees[${cur}].ws.w1pr=this.value"></div>
+    <div class="f"><label>SQ ratings / endorsement</label><input value="${d.w1sq||''}" oninput="nominees[${cur}].ws.w1sq=this.value" placeholder="e.g. 95% rated 4/5+"></div>
+  </div>
+  ${evHTML('ws','w1')}
+  <hr class="divider">
+  <div class="ws-sub">Workshop 2</div>
+  <div class="r3">
+    <div class="f"><label>Workshop name</label><input value="${d.w2n||''}" oninput="nominees[${cur}].ws.w2n=this.value"></div>
+    <div class="f"><label>Date</label><input value="${d.w2d||''}" oninput="nominees[${cur}].ws.w2d=this.value" placeholder="e.g. Jun 2026"></div>
+    <div class="f"><label>No. of participants</label><input value="${d.w2p||''}" oninput="nominees[${cur}].ws.w2p=this.value"></div>
+  </div>
+  <div class="r2">
+    <div class="f"><label>Profile of participants</label><input value="${d.w2pr||''}" oninput="nominees[${cur}].ws.w2pr=this.value"></div>
+    <div class="f"><label>SQ ratings / endorsement</label><input value="${d.w2sq||''}" oninput="nominees[${cur}].ws.w2sq=this.value"></div>
+  </div>
+  ${evHTML('ws','w2')}${genBlock('ws')}`; }
+
+function innForm(n){ const d=n.inn; return `
+  <div class="sec-hdr"><h3>C — Innovator / innovator (technology for learning)</h3><p>Develops and implements innovation to support professional learning</p></div>
+  <div class="f"><label>Sub-area</label>
+    <div class="ro">
+      <label class="rop"><input type="radio" name="tc${cur}" value="no" ${d.tech!=='yes'?'checked':''} onchange="nominees[${cur}].inn.tech='no'"> General innovator</label>
+      <label class="rop"><input type="radio" name="tc${cur}" value="yes" ${d.tech==='yes'?'checked':''} onchange="nominees[${cur}].inn.tech='yes'"> Innovator (technology for learning)</label>
+    </div>
+  </div>
+  <div class="f"><label>Name of innovation</label><input value="${d.nm||''}" oninput="nominees[${cur}].inn.nm=this.value" placeholder="e.g. AI-assisted feedback tool"></div>
+  <div class="r2">
+    <div class="f"><label>Sharing details and guidance</label><input value="${d.sh||''}" oninput="nominees[${cur}].inn.sh=this.value" placeholder="Platform, audience, guidance provided"></div>
+    <div class="f"><label>Date of sharing</label><input value="${d.dt||''}" oninput="nominees[${cur}].inn.dt=this.value" placeholder="e.g. Apr 2026"></div>
+  </div>
+  ${evHTML('inn','')}${genBlock('inn')}`; }
+
+function menForm(n){ const d=n.men; return `
+  <div class="sec-hdr"><h3>D — Mentor</h3><p>Leads, guides, and supports other officers to develop professionally</p></div>
+  <div class="f"><label>Name and profile of mentee(s)</label><textarea oninput="nominees[${cur}].men.mt=this.value">${d.mt||''}</textarea></div>
+  <div class="f"><label>Period of mentoring</label><input value="${d.pd||''}" oninput="nominees[${cur}].men.pd=this.value" placeholder="e.g. Jan 2025 – Jun 2026"></div>
+  ${evHTML('men','')}${genBlock('men')}`; }
+
+function resForm(n){ const d=n.res; return `
+  <div class="sec-hdr"><h3>E — Researcher</h3><p>Conducts research to improve teaching and learning and publishes findings</p></div>
+  <div class="f"><label>Research project partner</label><textarea style="min-height:52px" oninput="nominees[${cur}].res.pt=this.value">${d.pt||''}</textarea></div>
+  <div class="f"><label>Title of research project</label><input value="${d.tl||''}" oninput="nominees[${cur}].res.tl=this.value"></div>
+  <div class="r2">
+    <div class="f"><label>Platform published / shared</label><input value="${d.pl||''}" oninput="nominees[${cur}].res.pl=this.value" placeholder="e.g. SingTeach, AST conference"></div>
+    <div class="f"><label>Date published / shared</label><input value="${d.dt||''}" oninput="nominees[${cur}].res.dt=this.value" placeholder="e.g. May 2026"></div>
+  </div>
+  ${evHTML('res','')}${genBlock('res')}`; }
+
+function renderMain(){
+  const n=N();
+  if(!av||!n.areas.length){ resetMain(); return; }
+  const tabs=n.areas.map(aid=>{
+    const a=AREAS.find(x=>x.id===aid); const done=!!n.out[aid];
+    return `<button class="atab${curA===aid?' act':''}${done?' done':''}" onclick="selArea('${aid}')"><span class="dot ${done?'dd':'dp'}"></span>${a.lb}</button>`;
+  }).join('');
+  let form='';
+  if(curA==='nlc') form=nlcForm(n);
+  else if(curA==='ws')  form=wsForm(n);
+  else if(curA==='inn') form=innForm(n);
+  else if(curA==='men') form=menForm(n);
+  else if(curA==='res') form=resForm(n);
+  $('main-panel').innerHTML=`<div class="atabs">${tabs}</div>${form}`;
+  restoreEv();
+  const ob=$('ow-'+curA);
+  if(ob && n.out[curA]){ ob.style.display='block'; $('ob-'+curA).textContent=n.out[curA]; }
+}
+
+function restoreEv(){
+  const rs=(ak2,sk)=>{
+    const u=`ev_${cur}_${sk||ak2}`; rEF(cur,ak2,sk||'',u);
+    const el=$('en_'+u); if(el){ const n2=nominees[cur]; el.value=sk?n2[ak2][sk+'notes']||'':n2[ak2].notes||''; }
+  };
+  if(curA==='nlc') rs('nlc','');
+  else if(curA==='ws'){ rs('ws','w1'); rs('ws','w2'); }
+  else if(curA==='inn') rs('inn','');
+  else if(curA==='men') rs('men','');
+  else if(curA==='res') rs('res','');
+}
+function selArea(id){ curA=id; renderMain(); }
+
+/* ─── Gemini API ─────────────────────────────────────────────────────────────
+   REST endpoint: POST /v1beta/models/{model}:streamGenerateContent?alt=sse
+   Auth: ?key=YOUR_API_KEY (query param, no server needed)
+   Multimodal: pass files as inline_data {mime_type, data (base64)}
+   Gemini 2.0 Flash reads PDF slides, images, screenshots natively.
+   Docs: https://ai.google.dev/api/generate-content#v1beta.models.streamGenerateContent
+   ─────────────────────────────────────────────────────────────────────────── */
+function buildParts(area){
+  const n=N(); const nm=n.name||'the nominee';
+  const systemPrompt = `You are writing a nomination for the Academy Awards for Professional Development (Academy of Singapore Teachers, 2026 cycle) for ${nm} from Beatty Secondary School.
+
+IMPORTANT: Read ALL uploaded files carefully — slides, screenshots, feedback forms, images. Extract specific evidence, examples, outcomes, and quotes from them to make the write-up concrete and compelling.
+
+Write in third person, professionally, in the style of an MOE nomination. Be specific. Output only the write-up text — no headings, no preamble.`;
+
+  const parts = [{text: systemPrompt}];
+
+  /* attach files as inline_data — Gemini reads them directly */
+  const addFiles = files => (files||[]).forEach(f => {
+    parts.push({ inline_data: { mime_type: f.type, data: f.data.split(',')[1] } });
+  });
+
+  if(area==='nlc'){
+    const d=n.nlc;
+    parts.push({text:`Area: Facilitator of Networked Learning Communities
+NLC name: ${d.n||'(not specified)'}
+No. of members: ${d.m||'(not specified)'}
+Background & focus: ${d.b||'(see uploaded files)'}
+Nominee's role: ${d.r||'(see uploaded files)'}
+Details of sharing: ${d.s||'(see uploaded files)'}
+Additional notes: ${d.notes||'none'}
+
+Write 200–250 words. Cover: facilitation approach, programmes/strategies developed, positive impact on other officers, sense of community built, how networked learning and reflective practice were promoted. Reference specific evidence from uploaded files.`});
+    addFiles(d.files);
+  } else if(area==='ws'){
+    const d=n.ws;
+    parts.push({text:`Area: Facilitator of Workshops
+Workshop 1: ${d.w1n||'(see files)'} | Date: ${d.w1d||'(see files)'} | Participants: ${d.w1p||'?'} (${d.w1pr||'see files'}) | SQ: ${d.w1sq||'see files'} | Notes: ${d.w1notes||'none'}
+Workshop 2: ${d.w2n||'(see files)'} | Date: ${d.w2d||'(see files)'} | Participants: ${d.w2p||'?'} (${d.w2pr||'see files'}) | SQ: ${d.w2sq||'see files'} | Notes: ${d.w2notes||'none'}
+
+Write two separate write-ups (~130 words each). Each should cover: facilitation approach, quality of delivery supported by quantitative data, how nominee guided participants to translate learning into practice. Reference specific evidence from uploaded files.
+
+Format exactly as:
+WORKSHOP 1 WRITE-UP:
+[text here]
+
+WORKSHOP 2 WRITE-UP:
+[text here]`});
+    addFiles(d.w1files); addFiles(d.w2files);
+  } else if(area==='inn'){
+    const d=n.inn;
+    const sub = d.tech==='yes' ? 'Innovator (Technology for Learning)' : 'Innovator';
+    parts.push({text:`Area: ${sub}
+Innovation name: ${d.nm||'(see uploaded files)'}
+Sharing details: ${d.sh||'(see uploaded files)'}
+Date of sharing: ${d.dt||'(see uploaded files)'}
+Additional notes: ${d.notes||'none'}
+
+Write 200–250 words. Cover: what the innovation is and the problem it solves, how it was developed and implemented, evidence of positive impact, how the nominee shared it and guided others to adopt and adapt it. Reference specific evidence from uploaded files.`});
+    addFiles(d.files);
+  } else if(area==='men'){
+    const d=n.men;
+    parts.push({text:`Area: Mentor
+Mentee(s): ${d.mt||'(see uploaded files)'}
+Period of mentoring: ${d.pd||'(see uploaded files)'}
+Additional notes: ${d.notes||'none'}
+
+Write 200–250 words. Cover: mentoring approach tailored to mentee needs, developmental plan and strategies used, positive impact on mentee(s) with specific examples, how nominee is held in high esteem as a role model for self-development and collaboration. Reference specific evidence from uploaded files.`});
+    addFiles(d.files);
+  } else if(area==='res'){
+    const d=n.res;
+    parts.push({text:`Area: Researcher
+Research partner: ${d.pt||'(see uploaded files)'}
+Research title: ${d.tl||'(see uploaded files)'}
+Published/shared at: ${d.pl||'(see uploaded files)'}
+Date published: ${d.dt||'(see uploaded files)'}
+Additional notes: ${d.notes||'none'}
+
+Write 200–250 words. Cover: research focus and methodology, collaborative nature, how findings were translated and implemented in practice, impact on teaching/learning or workflow, where and when findings were published or shared. Reference specific evidence from uploaded files.`});
+    addFiles(d.files);
+  }
+  return parts;
+}
+
+async function generate(area){
+  const btn=$('gbtn-'+area);
+  const wrap=$('ow-'+area);
+  const body=$('ob-'+area);
+  btn.disabled=true;
+  btn.innerHTML=`<span class="spin"></span> &nbsp;Reading evidence and generating…`;
+  wrap.style.display='block';
+  body.textContent='';
+
+  const url = '/api/generate';
+
+  try{
+    const resp = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        contents:[{ role:'user', parts: buildParts(area) }],
+        generationConfig:{ maxOutputTokens:1200, temperature:0.65 }
+      })
+    });
+
+    if(!resp.ok){
+      let errMsg = `HTTP ${resp.status}`;
+      try{ const e=await resp.json(); errMsg=e?.error?.message||errMsg; }catch(e2){}
+      body.textContent=`❌ Error: ${errMsg}\n\nCheck that your API key is valid and has access to Gemini 2.0 Flash.`;
+      btn.disabled=false; btn.innerHTML=`${SPARK} &nbsp;Retry`;
+      return;
+    }
+
+    /* parse SSE stream — each chunk is a JSON object with candidates */
+    const reader=resp.body.getReader(); const dec=new TextDecoder(); let full='';
+    while(true){
+      const{done,value}=await reader.read(); if(done) break;
+      const chunk=dec.decode(value);
+      for(const line of chunk.split('\n')){
+        if(line.startsWith('data: ')){
+          try{
+            const j=JSON.parse(line.slice(6));
+            const text=j?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if(text){ full+=text; body.textContent=full; }
+          }catch(e){}
+        }
+      }
+    }
+
+    if(!full){
+      body.textContent='No output returned. Try uploading more evidence or adding notes above.';
+    }
+    N().out[area]=full;
+    refreshDots();
+    /* scroll to result */
+    wrap.scrollIntoView({behavior:'smooth', block:'nearest'});
+
+  }catch(e){
+    body.textContent=`❌ Network error: ${e.message}\n\nCheck your internet connection and API key.`;
+  }
+
+  btn.disabled=false;
+  btn.innerHTML=`${SPARK} &nbsp;Regenerate`;
+}
+
+function refreshDots(){
+  document.querySelectorAll('.atab').forEach(t=>{
+    const m=t.getAttribute('onclick').match(/'(\w+)'/); if(!m) return;
+    const id=m[1]; const done=!!N().out[id];
+    t.className='atab'+(curA===id?' act':'')+(done?' done':'');
+    const d=t.querySelector('.dot'); if(d) d.className='dot '+(done?'dd':'dp');
+  });
+}
+
+function copyOut(area){
+  navigator.clipboard.writeText(N().out[area]||'').then(()=>{
+    const b=document.querySelector(`#ow-${area} .cp-btn`); if(!b) return;
+    const o=b.innerHTML; b.innerHTML='✓ Copied!'; setTimeout(()=>b.innerHTML=o, 1800);
+  });
+}
+
+/* ─── init ─────────────────────────────────────────────────────────────── */
+renderTabs();
+
+/* request fullscreen automatically on load */
+(function(){
+  function goFull(){
+    const el = document.documentElement;
+    if(el.requestFullscreen) el.requestFullscreen();
+    else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if(el.mozRequestFullScreen) el.mozRequestFullScreen();
+    else if(el.msRequestFullscreen) el.msRequestFullscreen();
+  }
+  /* browsers require a user gesture for fullscreen —
+     we trigger on the first click/keydown anywhere on the page */
+  function onGesture(){
+    goFull();
+    document.removeEventListener('click', onGesture);
+    document.removeEventListener('keydown', onGesture);
+  }
+  document.addEventListener('click', onGesture);
+  document.addEventListener('keydown', onGesture);
+
+  /* also add F11-style toggle with Escape awareness */
+  document.addEventListener('keydown', e=>{
+    if(e.key==='F11'){ e.preventDefault(); goFull(); }
+  });
+})();
+</script>
+</body>
+</html>
