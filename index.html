@@ -22,6 +22,13 @@ body{font-family:var(--fb);color:var(--tx);font-size:14px;background:#EDEBE7;min
 .tb-sub{font-size:11px;color:rgba(255,255,255,.6);margin-top:1px}
 .tb-dates{text-align:right;font-size:11px;color:rgba(255,255,255,.6);line-height:1.6}
 .tb-dates strong{color:#fff}
+.apibar{background:var(--rf);border-bottom:1px solid #e0cece;padding:8px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.apibar label{font-size:12px;font-weight:500;color:var(--red);white-space:nowrap}
+.apibar input{flex:1;max-width:400px;font-family:var(--fb);font-size:12px;padding:5px 9px;border:1px solid #d9c4c4;border-radius:3px;background:var(--wh);color:var(--tx)}
+.apibar input:focus{outline:none;border-color:var(--rm)}
+.apibar-hint{font-size:11px;color:var(--g3)}
+.apibar-hint a{color:var(--rm);text-decoration:none}
+.apibar-hint a:hover{text-decoration:underline}
 .strip{background:var(--rl);border-bottom:1px solid var(--g2);padding:8px 16px;display:flex;gap:5px;flex-wrap:wrap;align-items:center}
 .strip-lbl{font-size:11px;font-weight:500;color:var(--red);text-transform:uppercase;letter-spacing:.06em;margin-right:3px;white-space:nowrap}
 .nt{padding:4px 9px;font-size:12px;border:1px solid var(--g2);border-radius:3px;cursor:pointer;background:var(--wh);color:var(--t2);display:flex;align-items:center;gap:4px;transition:all .12s;white-space:nowrap;font-family:var(--fb)}
@@ -33,7 +40,7 @@ body{font-family:var(--fb);color:var(--tx);font-size:14px;background:#EDEBE7;min
 .add-btn{padding:4px 11px;font-size:12px;border:1.5px dashed var(--rm);border-radius:3px;cursor:pointer;background:transparent;color:var(--rm);font-weight:500;transition:all .12s;white-space:nowrap;font-family:var(--fb)}
 .add-btn:hover{background:var(--rm);color:#fff;border-style:solid}
 .layout{display:flex;min-height:calc(100vh - 130px)}
-.sidebar{width:216px;flex-shrink:0;background:var(--g1);border-right:1px solid var(--g2);position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto}
+.sidebar{width:216px;flex-shrink:0;background:var(--g1);border-right:1px solid var(--g2);position:sticky;top:88px;height:calc(100vh - 88px);overflow-y:auto}
 .main{flex:1;padding:20px 24px;overflow:auto}
 .sb-sec{padding:12px 14px;border-bottom:1px solid var(--g2)}
 .sb-lbl{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--g3);margin-bottom:7px}
@@ -138,6 +145,12 @@ body{font-family:var(--fb);color:var(--tx);font-size:14px;background:#EDEBE7;min
   <div class="tb-dates">Nomination period &nbsp;<strong>25 May – 15 Jul 2026</strong><br>Qualifying period &nbsp;<strong>28 Jun 2025 – 27 Jun 2026</strong></div>
 </div>
 
+<div class="apibar">
+  <label for="api-key">🔑 Gemini API Key</label>
+  <input id="api-key" type="password" placeholder="Paste your GEMINI_API_KEY here…" autocomplete="off">
+  <span class="apibar-hint">Get your free key at <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a> · Stored in this tab only, never sent anywhere else</span>
+</div>
+
 <div class="strip">
   <div class="strip-lbl">Nominees</div>
   <div id="ntabs" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center"></div>
@@ -205,6 +218,7 @@ const AREAS = [
   {id:'men', lb:'D – Mentor',    fl:'Mentor'},
   {id:'res', lb:'E – Researcher',fl:'Researcher'}
 ];
+const GEMINI_MODEL = 'gemini-2.0-flash';
 
 /* ─── state ──────────────────────────────────────────────────────────── */
 function mkN(num){
@@ -221,6 +235,7 @@ let nominees = Array.from({length:10}, (_,i) => mkN(i+1));
 let cur = 0, curA = 'nlc', av = false;
 const N  = () => nominees[cur];
 const $  = id => document.getElementById(id);
+const ak = () => $('api-key').value.trim();
 
 function toast(msg){
   const el=$('toast'); el.textContent=msg; el.classList.add('show');
@@ -358,12 +373,49 @@ function eDrop(e,ni,ak2,sk,u){ e.preventDefault(); eDL(u); hFiles(e.dataTransfer
 function eFile(e,ni,ak2,sk,u){ hFiles(e.target.files,ni,ak2,sk,u); }
 function getFA(ni,ak2,sk){ const n=nominees[ni]; const k=sk?sk+'files':'files'; if(!n[ak2][k])n[ak2][k]=[]; return n[ak2][k]; }
 function eNote(v,ni,ak2,sk){ nominees[ni][ak2][sk?sk+'notes':'notes']=v; }
+async function uploadToGemini(file, b64data){
+  // Upload file to Gemini File API via our Vercel proxy
+  // Returns fileUri string or null if failed
+  try {
+    const resp = await fetch('/api/generate?upload=1', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        mimeType: file.type,
+        data: b64data.split(',')[1],
+        displayName: file.name
+      })
+    });
+    const json = await resp.json();
+    return json.fileUri || null;
+  } catch(e) {
+    return null;
+  }
+}
+
 function hFiles(fl,ni,ak2,sk,u){
   const arr=getFA(ni,ak2,sk);
   Array.from(fl).forEach(f=>{
     if(f.type!=='application/pdf' && !f.type.startsWith('image/')) return;
     const r=new FileReader();
-    r.onload=e=>{ arr.push({name:f.name,size:f.size,type:f.type,data:e.target.result}); rEF(ni,ak2,sk,u); updateFileCount(); };
+    r.onload=async e=>{
+      const b64=e.target.result;
+      const SIZE_LIMIT = 3 * 1024 * 1024; // 3MB — above this, use File API
+      let fileUri = null;
+      if(f.size > SIZE_LIMIT){
+        // show uploading state
+        const entry = {name:f.name, size:f.size, type:f.type, data:b64, uploading:true, fileUri:null};
+        arr.push(entry);
+        rEF(ni,ak2,sk,u);
+        fileUri = await uploadToGemini(f, b64);
+        entry.uploading = false;
+        entry.fileUri = fileUri;
+        entry.uploadFailed = !fileUri;
+      } else {
+        arr.push({name:f.name, size:f.size, type:f.type, data:b64, fileUri:null});
+      }
+      rEF(ni,ak2,sk,u); updateFileCount();
+    };
     r.readAsDataURL(f);
   });
 }
@@ -372,9 +424,10 @@ function rEF(ni,ak2,sk,u){
   if(!arr.length){ el.innerHTML=''; return; }
   el.innerHTML=`<div class="evfiles">${arr.map((f,i)=>{
     const isImg=f.type.startsWith('image/');
+    const status = f.uploading ? ' ⏳ uploading to Gemini...' : f.uploadFailed ? ' ⚠ upload failed, will use inline' : f.fileUri ? ' ✓ uploaded' : '';
     return `<div class="evfile">${
       isImg ? `<img class="evthumb" src="${f.data}" alt="">` : `<span style="font-size:16px;flex-shrink:0">📄</span>`
-    }<span class="evname">${f.name}</span><span class="evsz">${Math.round(f.size/1024)}KB</span><button class="evrm" onclick="rmFile(${ni},'${ak2}','${sk||''}',${i},'${u}')">✕</button></div>`;
+    }<span class="evname">${f.name}<span style="font-size:10px;color:var(--g3)">${status}</span></span><span class="evsz">${Math.round(f.size/1024)}KB</span><button class="evrm" onclick="rmFile(${ni},'${ak2}','${sk||''}',${i},'${u}')">✕</button></div>`;
   }).join('')}</div>`;
 }
 function rmFile(ni,ak2,sk,i,u){ getFA(ni,ak2,sk).splice(i,1); rEF(ni,ak2,sk,u); updateFileCount(); }
@@ -523,9 +576,15 @@ Write in third person, professionally, in the style of an MOE nomination. Be spe
 
   const parts = [{text: systemPrompt}];
 
-  /* attach files as inline_data — Gemini reads them directly */
+  /* attach files — small files inline, large files via Gemini File API URI */
   const addFiles = files => (files||[]).forEach(f => {
-    parts.push({ inline_data: { mime_type: f.type, data: f.data.split(',')[1] } });
+    if(f.fileUri){
+      // already uploaded via File API — use URI reference
+      parts.push({ file_data: { mime_type: f.type, file_uri: f.fileUri } });
+    } else {
+      // inline base64 for small files
+      parts.push({ inline_data: { mime_type: f.type, data: f.data.split(',')[1] } });
+    }
   });
 
   if(area==='nlc'){
@@ -591,6 +650,12 @@ Write 200–250 words. Cover: research focus and methodology, collaborative natu
 }
 
 async function generate(area){
+  const key = ak();
+  if(!key){
+    toast('⚠ Please paste your Gemini API key in the bar at the top of the page.');
+    $('api-key').focus(); return;
+  }
+
   const btn=$('gbtn-'+area);
   const wrap=$('ow-'+area);
   const body=$('ob-'+area);
@@ -599,7 +664,7 @@ async function generate(area){
   wrap.style.display='block';
   body.textContent='';
 
-  const url = '/api/generate';
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${key}`;
 
   try{
     const resp = await fetch(url, {
